@@ -256,7 +256,7 @@ debug = true;
 // /* easy #2 */ console.log(postCorrespondence(['a/baa','ab/aa','bba/bb'],5,50,true, debug));
 // /* easy #3 */ console.log(postCorrespondence(['bab/a','a/aba','ab/b','ba/b'],5,50,true, debug));
 // /* easy #4 */ console.log(postCorrespondence(['ab/a','bbaaba/a','b/bbbb','bb/ab'],5,50,false));
-// /* easy #5 */ console.log(postCorrespondence(['baa/b','a/baa','b/aa'],5,50,true));
+ /* easy #5 */ console.log(postCorrespondence(['baa/b','a/baa','b/aa'],5,50,true));
 
 // this has a solution, but it's outside the range of the max allowed iterations 
 // /* hard #1 */ console.log(postCorrespondence(['a/b','ab/a','b/bab'],10,50,true, true));
