@@ -59,9 +59,9 @@ function postCorrespondence(dominos, qMax, depthMax, showStates) {
     // perform the BFS
     // loop through the queue we've created thus far
 
-    // console.log("--starting BFS--");
+    console.log("--starting BFS--");
     while (!halt && frontier.length ) {
-      // console.log("*Frontier: ", frontier)
+      console.log("*Frontier: ", frontier)
         // pluck out the oldest item in the queue   
       var item = frontier.shift();
       var left = item[0];
@@ -75,7 +75,7 @@ function postCorrespondence(dominos, qMax, depthMax, showStates) {
       for (var i = 0; i < dominos.length; i++) {
         var right = dominos[i];
         var newState = this.combineDominos(right, left);
-        // console.log(newState)
+        console.log(newState)
 
         if(newState in invalidStates) continue;
         // check to see if the state is valid and if we haven't seen this state before
@@ -118,21 +118,21 @@ function postCorrespondence(dominos, qMax, depthMax, showStates) {
     
     halt=false;
     //loop through the frontier provided by the BFS, and pass it into the dfs
-    // console.log("**Starting IDDFS", frontier)
+    console.log("**Starting IDDFS", frontier)
     
 
     // perform the iddfs by increasing the depth we plunge by one each time 
-    maxIterations = 10000;
+    maxIterations = 1000000;
     for(var j=1; j<=depthMax;j++){
       if(halt)break;
       // walk over the items in the frontier. These are the starting points for the IDDFS
       for (var node in frontier) {
 
         var item = frontier[node];
-        // console.log('***DFS DEQUEUE', j, item);
+        console.log('***DFS DEQUEUE', j, item);
         if(halt)break;
         var dfs = function(_node, limit) {
-          // console.log(maxIterations)
+          console.log(maxIterations)
           //base case 
           if (limit<=0 ){
             return;
@@ -141,24 +141,24 @@ function postCorrespondence(dominos, qMax, depthMax, showStates) {
             halt=true;
             return;
           }
-          var left = item[0];
+          var left = _node[0];
 
           // if we found what we're looking for
           if (this.isMatch(left)) {
             return left;
           }
           // bookkeeping for path recovery
-          var lpos = item[1];
+          var lpos = _node[1];
 
           for (var i = 0; i < dominos.length; i++) {
             var right = dominos[i];
             var newState = this.combineDominos(right, left);
             
             if(newState in invalidStates) continue;
-            // console.log(newState);
+            console.log(newState);
 
             if (this.isValidState(newState)) {
-              // console.log("--dfs--validState", limit, newState)
+              console.log("--dfs--validState", limit, newState)
                 // create a duplicate of the current path array
               var path = lpos.slice(0);
               // push this position into the path
@@ -169,6 +169,7 @@ function postCorrespondence(dominos, qMax, depthMax, showStates) {
               var solution = dfs(stateObject, limit - 1);
             }else {
               invalidStates[newState] = 1;
+              return
             }
 
           }
@@ -177,7 +178,7 @@ function postCorrespondence(dominos, qMax, depthMax, showStates) {
 
         // execute the DFS here
         var foundSequence = dfs(item, j);
-        //console.log("FOUNDSEQUENCE ", foundSequence);
+        console.log("FOUNDSEQUENCE ", foundSequence);
         
         if (foundSequence) {
           return foundSequence;
@@ -198,8 +199,8 @@ function postCorrespondence(dominos, qMax, depthMax, showStates) {
 //console.log(maxIterations,sequence,depthMax,invalidStates);
   // we've halted at predefined limit
   if(maxIterations<0) {
-    console.log("NO SOLUTION FOUND IN 100000 ITERATIONS");
-    return "NO SOLUTION FOUND IN 100000 ITERATIONS"
+    console.log("NO SOLUTION FOUND IN 1000000 ITERATIONS");
+    return "NO SOLUTION FOUND IN 1000000 ITERATIONS"
   }
 
   // if we don't have a solution , but we still within our search limits, then no solution exists
@@ -231,6 +232,8 @@ function postCorrespondence(dominos, qMax, depthMax, showStates) {
 }
 
 //postCorrespondence(["c/cca", "ac/ba","bb/b","ac/cb"], 5, 50,true);
-//postCorrespondence(['bb/b', 'a/aab', 'abbba/bb'], 5, 50, true);
+// postCorrespondence(['bb/b', 'a/aab', 'abbba/bb'], 5, 50, true);
 //postCorrespondence(['b/ba'],4,50,true);
-postCorrespondence(['bbb/bb','a/bb','bb/bba'],5,50,true);
+//postCorrespondence(['bbb/bb','a/bb','bb/bba'],5,50,true);
+ // postCorrespondence(['baa/b','a/baa','b/aa'],5,50,true);
+postCorrespondence(['a/b','ab/a','b/bab'],20,50,true);
