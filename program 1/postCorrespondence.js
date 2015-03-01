@@ -6,7 +6,7 @@
  */
 function postCorrespondence(dominos, qMax, depthMax, showStates, debug) {
   var maxIterations = 200000;
-  
+
   if (typeof(showStates) === 'undefined') showStates = false;
 
   String.prototype.endsWith = function(suffix) {
@@ -43,28 +43,28 @@ function postCorrespondence(dominos, qMax, depthMax, showStates, debug) {
     return str[1] === str[0];
   };
 
-  this.getInvalidFragment = function(state){
-    var str,invalidFragment;
+  this.getInvalidFragment = function(state) {
+    var str, invalidFragment;
     str = state.split('/');
 
-    if(str[0].length > str[1].length){
-      invalidFragment = str[0].slice(0,-str[1]);
-    }else{
-      invalidFragment = str[1].slice(0,-str[0]);
+    if (str[0].length > str[1].length) {
+      invalidFragment = str[0].slice(0, -str[1]);
+    } else {
+      invalidFragment = str[1].slice(0, -str[0]);
     }
 
-    return invalidFragment.length? invalidFragment:state;
+    return invalidFragment.length ? invalidFragment : state;
   };
 
-  
+
   this.isValidState = this.isPostfix;
   this.invalidStates = {};
   // bfs search of the dominos
   this.search = function() {
     var combineDominos, halt, i, j, k, left, len, len1, lpos, maxIetrations, right;
-    var frontier  = [];
-    var found     = false;
-    var halt      = false;
+    var frontier = [];
+    var found = false;
+    var halt = false;
 
     // preload the frontier with a deep copy of dominos and their positions
     for (i = j = 0, len = dominos.length; j < len; i = ++j) {
@@ -75,7 +75,7 @@ function postCorrespondence(dominos, qMax, depthMax, showStates, debug) {
     // loop through the queue we've created thus far
 
     if (debug) console.log("--starting BFS--");
-    while (!halt && frontier.length ) {
+    while (!halt && frontier.length) {
       if (debug) console.log("*Frontier: ", frontier)
         // pluck out the oldest item in the queue   
       var item = frontier.shift();
@@ -84,8 +84,8 @@ function postCorrespondence(dominos, qMax, depthMax, showStates, debug) {
       // bookkeeping for path recovery
       var lpos = item[1];
       // 
-      
-      
+
+
       // loop through the right side of the combinations
       for (var i = 0; i < dominos.length; i++) {
         var right = dominos[i];
@@ -127,34 +127,34 @@ function postCorrespondence(dominos, qMax, depthMax, showStates, debug) {
         }
       }
     }
-    
+
     // die here if we've exceeded our allowable max iterations over the array
     //if (!maxIterations) return false;
-    
-    halt=false;
+
+    halt = false;
     //loop through the frontier provided by the BFS, and pass it into the dfs
     if (debug) console.log("**Starting IDDFS", frontier)
-    
+
 
     // perform the iddfs by increasing the depth we plunge by one each time 
     maxIterations = 500000;
-    for(var j=1; j<=depthMax;j++){
-      if(halt)break;
+    for (var j = 1; j <= depthMax; j++) {
+      if (halt) break;
       // walk over the items in the frontier. These are the starting points for the IDDFS
       for (var node in frontier) {
 
         var item = frontier[node];
         if (debug) console.log('***DFS DEQUEUE', j, item);
-        if(halt || found)break;
+        if (halt || found) break;
         var dfs = function(_node, limit) {
-          if(found) return _node;
+          if (found) return _node;
           if (debug) console.log(maxIterations)
-          //base case 
-          if (limit<=0 ){
+            //base case 
+          if (limit <= 0) {
             return;
-          }  
-          if(--maxIterations <=0) {
-            halt=true;
+          }
+          if (--maxIterations <= 0) {
+            halt = true;
             return;
           }
           var left = _node[0];
@@ -169,8 +169,8 @@ function postCorrespondence(dominos, qMax, depthMax, showStates, debug) {
           for (var i = 0; i < dominos.length; i++) {
             var right = dominos[i];
             var newState = this.combineDominos(right, left);
-            
-            
+
+
             if (debug) console.log(newState);
 
             if (this.isValidState(newState) && !(this.getInvalidFragment(newState) in this.invalidStates)) {
@@ -185,8 +185,8 @@ function postCorrespondence(dominos, qMax, depthMax, showStates, debug) {
               var solution = dfs(stateObject, limit - 1);
 
               // RETURN SOLUTION HERE
-              if(solution) return solution;
-            }else {
+              if (solution) return solution;
+            } else {
               this.invalidStates[this.getInvalidFragment(newState)] = 1;
             }
           }
@@ -196,13 +196,13 @@ function postCorrespondence(dominos, qMax, depthMax, showStates, debug) {
         // execute the DFS here
         var foundSequence = dfs(item, j);
         //if (debug) console.log("FOUNDSEQUENCE ", foundSequence);
-        
+
         if (foundSequence) {
           return foundSequence;
         }
       }
     }
-    
+
 
     return false;
   };
@@ -212,20 +212,19 @@ function postCorrespondence(dominos, qMax, depthMax, showStates, debug) {
 
   // trigger the search 
   var sequence = this.search();
-    if (debug) console.log(this.invalidStates);
-//if (debug) console.log(maxIterations,sequence,depthMax,invalidStates);
+  if (debug) console.log(this.invalidStates);
   // we've halted at predefined limit
-  if(maxIterations<0) {
+  if (maxIterations < 0) {
     return "NO SOLUTION FOUND IN 500000 ITERATIONS"
   }
 
   // if we don't have a solution , but we still within our search limits, then no solution exists
-  if(!sequence && depthMax) {
+  if (!sequence && depthMax) {
     return "NO SOLUTION AT THIS DEPTH"
   }
 
   //otherwise, we've halted at predefined limit
-  if(!sequence && !maxIterations){
+  if (!sequence && !maxIterations) {
     return "NO SOLUTION";
   }
 
@@ -237,7 +236,7 @@ function postCorrespondence(dominos, qMax, depthMax, showStates, debug) {
       return 'D' + (curr + 1);
     });
     return sequence;
-  }else{
+  } else {
     return sequence[0];
   }
 
@@ -261,4 +260,3 @@ debug = true;
 
 // this has a solution, but it's outside the range of the max allowed iterations 
 // /* hard #1 */ console.log(postCorrespondence(['a/b','ab/a','b/bab'],10,50,true, true));
-
