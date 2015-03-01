@@ -190,7 +190,7 @@ function postCorrespondence(dominos, qMax, depthMax, showStates) {
 
   //otherwise, we've halted at predefined limit
   if(!sequence ){
-
+    return "NO SOLUTION AT THIS DEPTH"
   }
 
 
@@ -209,6 +209,6 @@ function postCorrespondence(dominos, qMax, depthMax, showStates) {
 
 }
 
-postCorrespondence(['bb/b', 'a/aab', 'abbba/bb'], 5, 3, true);
+postCorrespondence(['bb/b', 'a/aab', 'abbba/bb'], 5, 50, true);
 //postCorrespondence(['b/ba'],4,50,true);
 //postCorrespondence(['bbb/bb','a/bb','bb/bba'],5,50,true);
