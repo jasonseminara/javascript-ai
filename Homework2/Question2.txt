@@ -1,0 +1,102 @@
+Jason Seminara
+N12517906
+2015-03-03
+Problem Set 2 
+
+Question 2
+
+
+(A V B) <=> (~C ∧ D).
+((A V B) => (~C ∧ D)) ∧ ((~C ∧ D)=>(A V B))
+
+(~(A V B) V (~C ∧ D)) ∧ (~(~C ∧ D) V (A V B))
+
+((~A ∧ ~B) V (~C ∧ D)) ∧ ((C V ~D) V (A V B))
+
+(~A ∧ ~B) V (~C ∧ D) ∧ ((C V ~D) V (A V B))
+
+(~A V (~C ∧ D)) ∧ (~B V (~C ∧ D)) ∧ (C V ~D V A V B)
+
+(~A V ~C) ∧ (~A V D)  ∧ (~B V ~C)  ∧ (~B V D)  ∧ (C V ~D V A V B)
+
+{
+	1. ~A V ~C.
+	2. ~A V  D. 
+	3. ~B V ~C. 
+	4. ~B V  D. 
+	5.  C V ~D V A V B.
+	6. A V B V E.
+	7. ~D V ~E V ~G.
+	8. ~G V E
+}	
+
+
+
+
+Question 3
+
+
+Initial set of clauses S0
+1. ~A V ~C
+2. ~A V  D 
+3. ~B V ~C 
+4. ~B V  D
+5. C V ~D V A V B
+6. A V B V E
+7. ~D V ~E V ~G
+8. ~G V E
+
+Initial valuation V0: All atoms unbound.
+
+I. Call dp1(ATOMS, S0, V0);
+~G is a pure literal (G never appears) V1={G:0};
+call propagate(A,S0,V1) (Delete 8; ~G from 7)
+New set of clauses S1:
+1. ~A V ~C
+2. ~A V  D 
+3. ~B V ~C 
+4. ~B V  D
+5. C V ~D V A V B
+6. A V B V E
+7. ~D V ~E
+
+No pure literals, no singleton clauses.
+Try V[A]:=0; V2={G:0,A:0};
+call propagate(A,S1,V2) : Delete 1,2; A from 5,6
+New set of clauses S2:
+3. ~B V ~C 
+4. ~B V  D
+5. C V ~D V B
+6. B V E
+7. ~D V ~E
+
+	II. Call dp1(ATOMS, S2, V2);
+	No pure literals, no singleton clauses.
+	Try V[B]:=0; V3={G:0,A:0,B:0};
+	call propagate(B,S2,V3) : Delete 3,4; B from 5,6
+	New set of clauses S3:
+	5. C V ~D
+	6. E
+	7. ~D V ~E
+
+		III. Call dp1(ATOMS, S3, V3);
+		obviousAssign(E); V4={G:0,A:0,B:0,E:1};
+		call propagate(E,S3,V4) : Delete 6; ~E from 7
+		New set of clauses S4:
+		5. C V ~D
+		7. ~D
+
+		~D is a singleton
+		obviousAssign(D) (false); V5={G:0,A:0,B:0,E:1,D:0};
+		call propagate(E,S4,V5) : Delete 7; ~D from 5
+		New set of clauses S5:
+		5. C 
+
+		C is a singleton
+		obviousAssign(C) (true); V6={G:0,A:0,B:0,E:1,D:0,C:1};
+		call propagate(C,S5,V6) : Delete 5;
+		return V6;
+		
+
+
+
