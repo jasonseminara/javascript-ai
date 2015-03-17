@@ -5,12 +5,69 @@
   davis_putnam = function(atoms) {
     var V, del, dp1, obvious_assign, propagate, pure_literals, x, _i, _len;
     pure_literals = [];
-    V = arguments.atoms;
-    for (_i = 0, _len = atoms.length; _i < _len; _i++) {
-      x = atoms[_i];
-      alert(x);
-    }
-    S;
+    
+    // take the incoming string disjunctions, convert them to a 2d array
+    atoms = atoms.map(function(el){
+      return el.split(' ');
+    });
+
+    get_pure_literals = function(atoms){
+      var i,j,el,key;
+      var pl = {};
+      var literals = [];
+
+      // loop through the 2d array   
+      for(i in atoms){
+        for (j in atoms[i]){
+
+          // get a pointer to the 2nd dimension
+          el = atoms[i][j];
+
+          // get the character w/o the sign
+          key = Math.abs(el);
+          
+          // if this is the first time we've seen this atom
+          if(!(key in pl)){
+            pl[key]={};
+          }
+
+          // we want to put negs/false in the 0th position ; pos/true in the 1st position
+          // we'll put the original el value as the value at that position (bonus, free space!)
+          // later, any obj (pl[key]) with length 1 will be considered a pure literal
+          //
+          // note, this could have been done with an array, saving the extra loop down below,
+          // but doing so incurs extra overhead for removing the null item from the 
+          // array if the literal was positive (inserted at pos 1). 
+          //
+          // use a ternary here to determine the el's sign
+          // ~A = 0 ; A = 1
+          
+          pl[key][ (el>0)?1:0 ] = el;
+        }
+      } 
+
+      // now that we have the table filled out, 
+      // let's return only those that we've seen as only one polarity
+      for(i in pl){
+
+        // any object with size 1 is our literal
+        if(Object.keys(pl[i]).length === 1){
+
+          // we don't know if the key here is 1 or 0, so the
+          // easiest way to get the value of the first item w/o knowing the key name
+          // is to loop and grab the val
+          for(j in pl[i]){
+            literals.push(pl[i][j]);
+            continue;
+          }
+        }
+      }
+
+      return literals;
+    };
+
+
+
     dp1 = function(atoms, S, V) {
       return S;
     };
