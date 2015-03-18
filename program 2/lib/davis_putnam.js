@@ -6,49 +6,56 @@
     return this.slice(0);
   };
 
+
+
   dp = function(atoms) {
-    var v, del, dp1, obvious_assign, propagate, pure_literals, x;
+    var atom, v, dp1, obvious_assign, propagate, get_pure_literals, hasSingletons;
     var foundAtoms = [];
 
     atoms = atoms.map( function(el){
       return el.split(' ');
     });
+    
+    atom = function (a){
+      return Math.abs(a);
+    }
+
+    hasSingletons = function(set){
+      return set.some(function(clause){
+        return clause.length === 1;
+      });
+    };
+
 
     get_pure_literals = function (atoms){
-      var i,j,el,key;
       var pl = {};
       var literals = [];
 
-      // loop through the 2d array   
-      for(i in atoms){
-        for (j in atoms[i]){
+      // we want to put negs/false in the 0th position ; pos/true in the 1st position
+      // we'll put the original el value as the value at that position (bonus, free space!)
+      // later, any obj (pl[key]) with length 1 will be considered a pure literal
+      //
+      // note, this could have been done with an array, saving the extra loop down below,
+      // but doing so incurs extra overhead for removing the null item from the 
+      // array if the literal was positive (inserted at pos 1). 
+      //
 
-          // get a pointer to the 2nd dimension
-          el = atoms[i][j];
-
-
+      atoms.map(function(clause){
+        clause.map(function(el){
           // get the character w/o the sign
-          key = Math.abs(el);
-          
+          var key = atom(el);
+
           // if this is the first time we've seen this atom
           if(!(key in pl)){
             pl[key]={};
           }
 
-          // we want to put negs/false in the 0th position ; pos/true in the 1st position
-          // we'll put the original el value as the value at that position (bonus, free space!)
-          // later, any obj (pl[key]) with length 1 will be considered a pure literal
-          //
-          // note, this could have been done with an array, saving the extra loop down below,
-          // but doing so incurs extra overhead for removing the null item from the 
-          // array if the literal was positive (inserted at pos 1). 
-          //
           // use a ternary here to determine the el's sign
           // ~A = 0 ; A = 1
-          
           pl[key][ (el>0)?1:0 ] = el;
-        }
-      } 
+        });
+      });
+
 
       // now that we have the table filled out, 
       // let's return only those that we've seen as only one polarity
@@ -70,7 +77,7 @@
       return literals;
     };
 
-    function removeClauses_Literals(set, literals){
+    removeClauses_Literals = function (set, literals){
 
         // we'll always have a nested array
         // if any literal matches an atom, remove the clause from the set
@@ -83,52 +90,37 @@
         }); 
       });
     }
+    obvious_assign = function(l, v) {
+      // if l>0, it's true, else false
+      v[atom(l)] = l > 0;
+      return v;
+    };  
 
-    function hasSingletons(set){
-      return set.some(function(clause){
-        return clause.length === 1;
-      });
-    }
+    propagate = function(a, s, v) {
+      
+      return s.filter(function(c){
 
-/*Array.prototype.intersect = function() {
-  return this.filter(function(v) {
-    return [x].every(function(a) {
-        return a.indexOf(v) !== -1;
-    });
-  });
-};*/
-
-
-
-    function _removeLiterals(set, literals){
-      // literals is an array of literals
-      var accumulator = [];
-      var temp;
-
-      set.forEach(function(el){
-        
-        // we'll always have a nested array
-        // if any literal matches the atom, remove it from the set
-        // (return false for every match)
-        temp = el.filter( function(e){
-          return !literals.some(function(atom){
-            return (atom === e);
-          }); 
-        });
-        // only add it to the new set if it has a length
-        // this also prunes empty nodes
-        if(temp.length){
-          accumulator.push(temp);
+        // if ((A in C and V[A]=TRUE) or (~A in C and V[A]==FALSE))
+        // then delete C from S
+        if((c.indexOf(a)  > -1) && (v[a]===true) || (c.indexOf(-a) > -1) && (v[a] === false)){
+          return false;
         }
-      });
-      return accumulator;
-    }
 
-    function dp1(atoms, s, v) {
-      var a,literals,singletons;
+        // if(A in C and V[A]==FALSE) then delete A from C
+        // if (~A in C and V[A]==TRUE) then delete ~A from C;
+        c = c.filter(function(el){
+          return !((el === a && v[a]==false) || (-(el) === a && v[a]==true));
+        });
+       
+      });  
+    };
+
+
+    dp1 = function (atoms, s, v) {
+      var a,literals,singletons,keepLooping;
           // take the incoming string disjunctions, convert them to a 2d array
 
-          keepLooping = true;
+      keepLooping = true;
       // Loop as long as there are easy cases to cherry pick */
       while (keepLooping) {       
         /*  BASE OF THE RECURSION: SUCCESS OR FAILURE */
@@ -151,58 +143,33 @@
         /* EASY CASES: PURE LITERAL ELIMINATION AND FORCED ASSIGNMENT */  
         literals = get_pure_literals(s);
 
+        /* Pure literal elimination */
         if( literals.length ){
           v = obvious_assign(literals,v);
           s = removeClauses_Literals(s, literals);
+
+        /* Forced assignment */
         }else if(hasSingletons(s)){
           v = obvious_assign(singletons,v);
           s = removeClauses_Literals(s, literals);
+        
+         /* No easy cases found */
         }else{
           keepLooping = false;
         }
+      }
 
-
-        
-/* EASY CASES: PURE LITERAL ELIMINATION AND FORCED ASSIGNMENT */
-    else if (there exists a literal L in S /* Pure literal elimination */
-               such that the negation of L does not appear in S)
-          then { V := obvious_assign(L,V);
-                 delete every clause containing L from S;
-               }
-    else if (there exists a clause C in S       /* Forced assignment */
-                containing a single literal L)
-           then { V := obvious_assign(L,V)
-                  S := propagate(atom(L), S, V);
-                }
-    else exitloop;  /* No easy cases found */
-  }   /* endloop */
       
       return s;
     };
 
 
+/////////////////
+
 
     dp1(s,v);
 
-    
-    
-    // Propagate 
-    this.propagate = function(a, s, v) {
-      for(var c in s){
-        if((a in c) && v[a]===true) || (!a in c) && v[a] === false){
-          delete s[c];
-        }
-      }
-      return s;
-    };
 
-    obvious_assign = function(literals, v) {
-      for(var l in literals){
-        // if l>0, it's true, else false
-        v[l] = l > 0;
-      }
-      return v;
-    };
   };
 
 }).call(this);
