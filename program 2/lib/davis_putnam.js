@@ -9,13 +9,13 @@
 
 
   dp = function(atoms) {
-    var atom, v, dp1, obvious_assign, propagate, get_pure_literals, hasSingletons;
+    var atom, v, dp1, obvious_assign, propagate, get_pure_literals, hasSingletons, pickNextAtom;
     var foundAtoms = [];
 
     atoms = atoms.map( function(el){
       return el.split(' ');
     });
-    
+
     atom = function (a){
       return Math.abs(a);
     }
@@ -77,14 +77,15 @@
       return literals;
     };
 
-    removeClauses_Literals = function (set, literals){
 
-        // we'll always have a nested array
-        // if any literal matches an atom, remove the clause from the set
-        // (return false for every match)
-      return set.filter( function(el){ 
-        return !el.some(function(el){
-          return literals.some(function(l){
+    /**
+    * Remove Clauses containing Literals
+    */
+    removeClauses_Literals = function (set, literals){
+      // we'll use filter here to remove the anything that has a clause containing a literal
+      return set.filter( function(e){ 
+        return !e.some( function(el){
+          return literals.some( function(l){
             return el === l 
           });
         }); 
@@ -96,23 +97,38 @@
       return v;
     };  
 
+    pickNextAtom = function(s,v) {
+      for(var i in s){
+        for(var j in s[i]){
+          if( !(atom(s[i][j]) in v) ){
+            return s[i][j];
+          }
+        }
+      }
+    };
+
     propagate = function(a, s, v) {
       
-      return s.filter(function(c){
+      return s.filter(function(c, i, arr){
 
         // if ((A in C and V[A]=TRUE) or (~A in C and V[A]==FALSE))
         // then delete C from S
-        if((c.indexOf(a)  > -1) && (v[a]===true) || (c.indexOf(-a) > -1) && (v[a] === false)){
-          return false;
-        }
+        return !((c.indexOf(a)  > -1) && (v[a]===true) || (c.indexOf(-a) > -1) && (v[a] === false));
+
+      }).map( function(c){
 
         // if(A in C and V[A]==FALSE) then delete A from C
         // if (~A in C and V[A]==TRUE) then delete ~A from C;
-        c = c.filter(function(el){
+        return c.filter( function(el){
+          if (!((el === a && v[a]==false) || (-(el) === a && v[a]==true))){
+
+            console.log("keeping " ,el ," in ", c);
+          }else{
+            console.log("removing " ,el ," from ", c);
+          }
           return !((el === a && v[a]==false) || (-(el) === a && v[a]==true));
         });
-       
-      });  
+      });
     };
 
 
@@ -159,6 +175,21 @@
         }
       }
 
+      var a = pickNextAtom(s,v);
+      v[a]=true;
+      var s1 = propagate(a,s,v);
+
+/* PICK SOME ATOM AND TRY EACH ASSIGNMENT IN TURN */
+pick atom A such that V[A] == UNBOUND;  /* Try one assignment */
+V[A] := TRUE;
+S1 := propagate(A, S, V);
+VNEW := dp1(ATOMS,S1,V);
+if (VNEW != NIL) then return(VNEW);
+
+/* IF V[A] := TRUE didn't work, try V[A} := FALSE; */
+V[A] := FALSE;
+S1 := propagate(A, S, V);
+return(dp1(ATOMS,S1,V));
       
       return s;
     };
