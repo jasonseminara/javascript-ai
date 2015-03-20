@@ -82,7 +82,7 @@ function dp(atoms) {
   this.obvious_assign = function(l, v) {
     // if l>0, it's true, else false
     v[atom(l)] = l > 0;
-    console.log('obvious_assigned',v);
+    console.log('obvious_assigned',l,v);
     return v;
   };
 
@@ -141,7 +141,7 @@ function dp(atoms) {
   this.propagate = function(a, s, v) {
     // note, this had to be split into two steps (filter,map) because 
     // because the inner modifications (remove atoms) were not propagated to the outer filter when it returned true.
-
+    console.log('propagate:',a);
     return s.filter(function(c) {
 
       // if ((A in C and V[A]=TRUE) or (~A in C and V[A]==FALSE))
@@ -188,23 +188,22 @@ function dp(atoms) {
     // Loop as long as there are easy cases to cherry pick */
     while (keepLooping) {
 
-      console.log("LOOP",keepLooping++);
+      console.log("LOOP",keepLooping++, s);
       /*  BASE OF THE RECURSION: SUCCESS OR FAILURE */
       // Success: All clauses are satisfied
       if (typeof s != "undefined" && s != null && s.length == 0) {
+        console.log(atoms);
 
-        atoms.forEach(function(a) {
-          var key = atom(a);
-          if (!(key in v)) {
-            v[key] = true;
-          }
-        });
+        var key = pickNextAtom(atoms,v);  
+
+        v[key] = true;
 
         //if V[A] == UNBOUND then assign V[A] either TRUE or FALSE;
         return v;
       }
       /* some clause in S is empty */
       else if (containsEmptyNode(s)) {
+        console.log(s,v)
         return;
       }
 
@@ -221,9 +220,11 @@ function dp(atoms) {
       } else if (hasSingletons(s)) {
         console.log(s,v);
         a = getSingleton(s);
+
         console.log('singleton-->',a)
+
         v = obvious_assign(a, v);
-        s = propagate(a, s, v);
+        s = propagate(atom(a), s, v);
 
         console.log('forced assignment',s)
         /* No easy cases found */
@@ -235,19 +236,21 @@ function dp(atoms) {
 
     /* PICK SOME ATOM AND TRY EACH ASSIGNMENT IN TURN */
     var a = pickNextAtom(s, v); 
-
+    console.log("Picked",a)
+    
     /* Try one assignment */
     v[a] = true;
-    console.log('BRANCHING',a,s,v);
+    console.log('BRANCHING',a,'=',v[a],s,v);
     var s1 = propagate(a, s, v);
     var vnew = dp1(s1, v);
     if (typeof vnew != 'undefined') {
       return vnew;
     }
 
+    console.log("**************BACKTRACKING************")
     /* IF V[A] := TRUE didn't work, try V[A} := FALSE; */
     v[a] = false;
-    console.log('BRANCHING',a,s,v);
+    console.log('BRANCHING',a,'=',v[a],s,v);
     var s1 = propagate(a, s, v);
     return dp1(s1, v);
   };
@@ -257,4 +260,4 @@ function dp(atoms) {
 
   return dp1(s, v);
 }
-dp(["1 2 3","1 -2 -3","1 -4","-2 -3 -4","-1 -2 3","6 5","6 -5","2 -6","-3 -6"])
+console.log(dp(["1 2 3","1 -2 -3","1 -4","-2 -3 -4","-1 -2 3","6 5","6 -5","2 -6","-3 -6"]))
