@@ -1,13 +1,13 @@
+
 function dp(atoms) {
   var s,v,atom;
-  s = [];
-  v = {};
-  atom = function(a) {
-    return Math.abs(a);
-  };
+  
   atoms = s = atoms.map(function(el) {
     return el.split(' ').map(Number);
   });
+  this.atom = function(a) {
+    return Math.abs(a);
+  };
 
   this.hasSingletons = function(set) {
     var sgl = set.some(function(clause) {
@@ -49,6 +49,7 @@ function dp(atoms) {
 
     // now that we have the table filled out, 
     // let's return only those that we've seen as only one polarity
+    // loop through this object the un-fancy way
     for (var i in pl) {
 
       // any object with size 1 is our literal
@@ -258,6 +259,6 @@ function dp(atoms) {
 
 
 
-  return dp1(s, v);
+  return dp1(s, {});
 }
 console.log(dp(["1 2 3","1 -2 -3","1 -4","-2 -3 -4","-1 -2 3","6 5","6 -5","2 -6","-3 -6"]))
