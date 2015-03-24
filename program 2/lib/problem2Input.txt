@@ -1,0 +1,15 @@
+A B C 
+Milk Eggs
+Truck1 Truck2 
+2
+START
+Truck1 A
+Truck2 B
+Eggs A
+Milk B
+A B 
+B A C 
+C A
+GOAL
+Eggs C
+Milk A
