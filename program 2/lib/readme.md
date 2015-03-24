@@ -1,6 +1,12 @@
 
-author Jason Seminara (js4308@cs.nyu.edu) N12517906 
-date 2015-03-24 
-Name Programming assignment #2
-Description Javascript/Nodejs implementation of the front-end of a logistics solver
+AUTHOR Jason Seminara (js4308@cs.nyu.edu) N12517906 
+
+DATE 2015-03-24 
+
+TITLE Programming assignment #2
+
+DESCRIPTION Javascript/Nodejs implementation of a logistics solver, complete with front-end and dp-solver
+
+To Run
+=======
 
