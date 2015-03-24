@@ -2,17 +2,18 @@
 * @author Jason Seminara (js4308@cs.nyu.edu) N12517906 
 * @date 2015-03-24 
 * @Name Programming assignment #2
-* @Description Javascript/Nodejs implementation of 
+* @Description Javascript/Nodejs implementation of the Davis Putnam Solver algorithm
+* @see http://www.cs.nyu.edu/faculty/davise/ai/dp-ex.pdf
 */
 (function() {
-  return {
-    dp: function(atoms) {
+  var dataFile = fs=require("fs"),backMatter;
+    function dp(atoms) {
       var s, v, atom;
 
       atoms = s = atoms.map(function(el) {
         return el.split(' ').map(Number);
       });
-      this.atom = function(a) {
+      atom = function(a) {
         return Math.abs(a);
       };
 
@@ -186,6 +187,10 @@
         });
       };
 
+
+      // DP1
+      // This is the main body of the algorithm
+      //
       this.dp1 = function(s, v) {
         console.log('call dp1', s, v);
         var a, literals, singletons, keepLooping;
@@ -213,7 +218,7 @@
           /* some clause in S is empty */
           else if (containsEmptyNode(s)) {
             console.log(s, v)
-            return;
+            return v;
           }
 
           /* EASY CASES: PURE LITERAL ELIMINATION AND FORCED ASSIGNMENT */
@@ -269,7 +274,82 @@
 
       return dp1(s, {});
     }
-  };
+
+    function parseIncomingDataFile(inputData) {
+      var a,row,newData=[];
+
+      // walk over the incoming data and read everything until we hit the ZERO
+      while (a = inputData.shift(), a != "0") {
+        newData.push(a.trim());
+      }
+
+      // the remainder is the back matter for the back-end
+      return [newData,inputData]
+    }
+
+    function flattenForFile(symbolMap){
+      //first get them into an array so we can have them in order
+      var a = [0];
+
+      // walk over the symbolMap and output the booleans as strings
+      for(var s in symbolMap){
+        a[s] = (symbolMap[s])?'T':'F'
+      }
+
+      //fill in the missing items with 'F'
+      for(var s=0;s<a.length;s++){
+        //console.log(typeof a[s], a[s]);
+        if(typeof a[s] === 'undefined'){
+          //console.log(a,s,a[s])
+          //throw 'i' ;
+          a[s] = 'F'
+        }
+      }
+
+      // create strings from the output in the format "i x"
+      var output = a.map(function(line,i){
+        return (i) ? i+' '+line : 0;
+      });
+
+      //rotate the top 0 to the bottom
+      output.push(output.shift());
+
+
+      var bm_text = backMatter.map(function(b) {
+         return b.split(' : ').join(' ')
+      });
+
+     
+      fs.writeFile("output-dp.txt", output.join('\n')+'\n'+bm_text.join('\n'), function(err) {
+        if(err) {
+            return console.log(err);
+        }
+
+        console.log("The file was saved!");
+      });
+    }
+
+
+
+    (function main(){
+      var fileContents,parsedInputData;
+      if (process.argv.length < 3) {
+        console.log('Usage: node ' + process.argv[1] + ' FILENAME');
+        process.exit(1);
+      }
+
+      fileContents  = fs.readFileSync(process.argv[2]).toString().split('\n');
+
+
+      // this takes the file from the command line and parses it
+      var data = parseIncomingDataFile(fileContents);
+      parsedInputData = data[0];
+      backMatter = data[1];
+
+      dpOutput = dp(parsedInputData);
+      flattenForFile(dpOutput)
+      console.log("#$#$#",dpOutput);
+    })();
 })();
 
 
