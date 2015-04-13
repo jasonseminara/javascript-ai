@@ -1,0 +1,93 @@
+== original (new)
+A. ∀s: ¬G(s,Blues) ∨ ¬G(s,Opera)
+B. ∀s W(Amy,s) => S(Amy,s)  
+C. ∃s W(Amy,s) ∧ G(s,Blues)
+D. ∀s[ ∃p[ F(p,Joe) ∧ S(p,s) ]  => L(Joe,s) ]
+E. F(Amy,Joe)
+
+F. ∃s: L(Joe,s) ∧ ¬G(s,Opera)
+--
+G. ∀s[ L(Joe,s) => ∃p[ F(p,Joe) ∧ S(s,p) ] ] 
+H. ∀s[ ∃p[ F(p,Joe) ∧ S(p,s) ] => W(Ted,s) ]
+I. ∀s[ W(Ted,s) => ¬L(Joe,s) ]
+ 
+=== CNF
+A. ∀s: ¬G(s,Blues)      ∨ ¬G(s,Opera)
+B. ∀s: ¬W(Amy,s)        ∨ S(Amy,s) 
+C. ∃s: W(Amy,s)         ∧ G(s,Blues)
+D. ∀p,s: ¬F(p,Joe)      ∨ ¬S(p,s) ∨ L(Joe,s)
+E. F(Amy,Joe)
+F. ∃s: L(Joe,s) ∧ G(s,Opera)
+
+== remove Quantifiers & break up top-level conjunctions
+A. ¬G(s,Blues)      ∨ ¬G(s,Opera)
+B. ¬W(Amy,s)        ∨ S(Amy,s) 
+C1. W(Amy,SK1)   
+C2. G(SK1,Blues)
+D. ¬F(p,Joe)    ∨ ¬S(p,s)       ∨ L(Joe,s)
+E. F(Amy,Joe)
+
+
+F' = ¬L(Joe,s) ∨ G(s,Opera)
+
+== 
+
+G. ¬S(Amy,s)       ∨ L(Joe,s)   (from E + D)
+H. ¬G(SK1,Opera)                (from A + C2)
+I. S(Amy,SK1)                   (from B + C1)
+J. L(Joe, SK1)                  (from G + I)
+K. G(SK1,Opera)                 (from H + K)
+
+=-=-=-=-=-=-=-=-
+
+
+G. ∀s[ L(Joe,s) => ∃p[ F(p,Joe) ∧ S(s,p) ] ] 
+   ∀s[ ~L(Joe,s) ∨ ∃p[ F(p,Joe) ∧ S(s,p) ] ] 
+   ∀s[ ~L(Joe,s) ∨ [F(SK0(s),Joe) ∧ S(s,SK0(s))] ]
+   [ ~L(Joe,s) ∨ [F(SK0(s),Joe) ∧ S(s,SK0(s))] ] 
+   ( ~L(Joe,s) ∨  F(SK0(s),Joe))  ∧  (~L(Joe,s) ∨ S(s,SK0(s)))
+
+H. ∀s[ ∃p[ F(p,Joe) ∧ S(p,s) ] => ~W(Ted,s) ]
+   ∀s[ ~∃p[ F(p,Joe) ∧ S(p,s) ] ∨ ~W(Ted,s) ]
+   ∀s,p [ ~F(p,Joe) ∨ ~S(p,s)  ∨ ~W(Ted,s) ]
+
+
+
+I. ~∀s[ W(Ted,s) => ¬L(Joe,s) ]
+    ∃s ~(W(Ted,s) => ¬L(Joe,s))
+    ∃s W(Ted,SK2) ∧ L(Joe,SK2)
+    W(Ted,SK2) ∧ L(Joe,SK2)
+
+======== CNF
+G1. ~L(Joe,s) ∨  F(SK0(s),Joe)
+G2. ~L(Joe,s) ∨  S(SK0(s),s)
+H.  ~F(p,Joe) ∨ ~S(p,s)  ∨ ~W(Ted,s)
+I1. W(Ted,SK2)
+I2. L(Joe,SK2)
+
+J.  F(SK0(SK2),Joe)     (from G1 + I2)
+K.  S(SK0(SK2),SK2)     (from G2 + I2)
+L.  ~F(p,Joe) ∨ ~S(p,SK2) (from H + I1)
+M.  ~S(SK0(SK2),SK2) (from J + L)
+N.  ∅ (from K + M)
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
