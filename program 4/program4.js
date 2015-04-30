@@ -1,7 +1,16 @@
 (function learn(bios,N,stopwords){
 	var bios = [];
 	var stopwords = {};
-	var trainingStats = {rawcount:{},stats:{}};
+	var ts = {
+		rawcount:{
+			cats:{},
+			words:{}
+		},
+		freq:{
+			cats:{},
+			words:{}
+		}
+	};
 
 	var fs = require('fs');
 	var events = new (require('events')).EventEmitter;
@@ -48,9 +57,17 @@
 			counter[cleanword] = {};
 		}
 		if(typeof counter[cleanword][cat] === 'undefined'){
-			counter[cleanword][cat] = 1;
+			counter[cleanword][cat] = 0;
 		}
+		counter[cleanword][cat]++;
 
+		/*if(typeof counter[cat] === 'undefined'){
+			counter[cat] = {};
+		}
+		if(typeof counter[cat][cleanword] === 'undefined'){
+			counter[cat][cleanword] = 1;
+		}
+		counter[cat][cleanword]++;*/
 	}
 
 
@@ -60,27 +77,38 @@
 
 		var trainingSet = bios.slice(0,N)
 			.map( function(el){
+				var wordsSeen = {};
 		  	var temp = el.toLowerCase().split(/\n/);		/* split each record into lines, */  
 		  	var name = temp.shift().trim();  /* In each biography, the first line is the name of the person.*/
 		  	var cat  = temp.shift().trim();  /* The second line is the category (a single word). */
 		  	var desc = temp.join(' ')       /* The remaining lines are the biography. */
 		  		.split(/\s+/)									/* we just joined the multiple arrays into one long string, now let's split on spaces */
 		  		.reduce( function(a,el){      /* remove small words and junk from the words */
+		  			
+		  			// This is the pass through the bio of one record
 		  			var cleanword = el.replace(/[^a-z]/g,'');
-
 		  			// if the words are longer than 2
 		  			// AND not in the startwords lookup, 
 		  			// start counting them
 						if(cleanword.length > 2 && !stopwords[cleanword]){
-							
-							tabulateWords(cat,cleanword,trainingStats.rawcount);
+							if(!wordsSeen[cleanword]){
+								tabulateWords(cat, cleanword, ts.rawcount.words);
+								wordsSeen[cleanword]=1;
+							}else{
+								wordsSeen[cleanword]++;
+							}
 							//push this into the set
 							a.push(cleanword);
 						}
+						//console.log(wordsSeen);
 						return a;
 
-		  		},[])
-		  	
+		  		},[]);
+
+		  	// tabulate the category frequency distribution
+		  	ts.rawcount.cats[cat] = ts.rawcount.cats[cat] ? ts.rawcount.cats[cat]+1 : 1; 
+		  	ts.freq.cats[cat] = ts.freq.cats[cat] ? ts.freq.cats[cat]+1/N : 1/N; 
+
 
 		   	return {
 		   		name	: name,				
@@ -99,7 +127,7 @@
 		// bios
 
 
-		console.log(trainingStats);
+		console.log(ts);
 		console.log('fileProcessingFinished');
 	});
 
