@@ -9,7 +9,15 @@
     freq: {
       cats: {},
       words: {}
-    }
+    },
+    prob: {
+      cats: {},
+      words: {}
+    },
+    lg: {
+      cats: {},
+      words: {}
+    },
   };
 
   var fs = require('fs');
@@ -70,6 +78,42 @@
     counter[cat][cleanword]++;*/
   }
 
+  function computeProbabilities(rc){
+
+      var PC = function(freq_c, totalCats){
+        return ((freq_c ? freq_c:0)+0.1) / (1+totalCats*0.1);
+      };
+      
+      var PWC = function(freq_wc){
+        return (freq_wc + 0.1) / (1+2*0.1);
+      };
+
+      var LC = function (prob_cats) {
+        return -(Math.log(prob_cats));
+      }
+
+      var LWC = function (pwc) {
+        return -(Math.log(pwc));
+      }
+
+      //var rc = ts.rawcount;
+      // now that we've tabulated all the counts, start workingout all the probabilities
+      for (var word in rc.words){
+        ts.freq.words[word]={};
+        ts.prob.words[word]={};
+        ts.lg.words[word]={};
+        for(var cat in rc.cats){
+          // freq of words per cat = total amount of words per cat / total amount of cats
+          ts.freq.words[word][cat] = (rc.words[word][cat] ? rc.words[word][cat]:0) / rc.cats[cat];
+          ts.prob.cats[cat]        = PC(ts.freq.cats[cat],Object.keys(rc.cats).length);
+          ts.prob.words[word][cat] = PWC(ts.freq.words[word][cat]);
+          ts.lg.cats[cat]        = LC(ts.prob.cats[cat]);
+          ts.lg.words[word][cat] = LWC(ts.prob.words[word][cat]);
+        }
+      };
+      return;
+    }
+ 
 
   events.on('fileProcessingFinished', function() {
     var wordsRemoved = [];
@@ -103,6 +147,7 @@
               //push this into the set
               a.push(cleanword);
             }
+
             //console.log(wordsSeen);
             return a;
 
@@ -119,8 +164,10 @@
           desc: desc
         };
       })
+      
+    computeProbabilities(ts.rawcount);
 
-
+    
     //console.log(trainingSet)
     //throw '';
 
@@ -135,16 +182,13 @@
   });
 
 
-  fs.readFile('stopwords.txt', {
-    encoding: 'utf8'
-  }, function(e, d) {
-    readFileContents(e, d, readStopWords)
+  fs.readFile('stopwords.txt', {  encoding: 'utf8'}, function(e, d) {  
+    readFileContents(e, d, readStopWords);
   });
-  fs.readFile('bioCorpus.txt', {
-    encoding: 'utf8'
-  }, function(e, d) {
-    readFileContents(e, d, readBio)
+
+  fs.readFile('bioCorpus.txt', {  encoding: 'utf8'}, function(e, d) {  
+    readFileContents(e, d, readBio);
   });
 
 
-})(1, 8);
+})(1, 9);
