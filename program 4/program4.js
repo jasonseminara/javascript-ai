@@ -22,7 +22,7 @@
 
   var fs = require('fs');
   var events = new(require('events')).EventEmitter;
-  var files = ['stopwords.txt', 'bioCorpus.txt'];
+  var files = ['stopwords.txt', 'tinyCorpus.txt'];
   var fileCount = 2;
 
 
@@ -60,55 +60,48 @@
   }
 
 
-  function tabulateWords(cat, cleanword, counter) {
-    if (typeof counter[cleanword] === 'undefined') {
-      counter[cleanword] = {};
-    }
-    if (typeof counter[cleanword][cat] === 'undefined') {
-      counter[cleanword][cat] = 0;
-    }
-    counter[cleanword][cat]++;
-
-    /*if(typeof counter[cat] === 'undefined'){
-      counter[cat] = {};
-    }
-    if(typeof counter[cat][cleanword] === 'undefined'){
-      counter[cat][cleanword] = 1;
-    }
-    counter[cat][cleanword]++;*/
-  }
+  
 
   function computeProbabilities(rc){
+      var epsilon = 0.1;
 
       var PC = function(freq_c, totalCats){
-        return ((freq_c ? freq_c:0)+0.1) / (1+totalCats*0.1);
+        return ((freq_c ? freq_c:0)+epsilon) / (1+totalCats*epsilon);
       };
       
       var PWC = function(freq_wc){
-        return (freq_wc + 0.1) / (1+2*0.1);
+        return (freq_wc + epsilon) / (1+2*epsilon);
       };
 
       var LC = function (prob_cats) {
-        return -(Math.log(prob_cats));
+        return -(Math.log2(prob_cats));
       }
 
       var LWC = function (pwc) {
-        return -(Math.log(pwc));
+        return -(Math.log2(pwc));
+      }
+
+      var freqDistro = function (totalWords, totalCats) {
+        return (totalWords ? totalWords:0) / totalCats;
       }
 
       //var rc = ts.rawcount;
       // now that we've tabulated all the counts, start workingout all the probabilities
       for (var word in rc.words){
+        
         ts.freq.words[word]={};
         ts.prob.words[word]={};
         ts.lg.words[word]={};
+
         for(var cat in rc.cats){
-          // freq of words per cat = total amount of words per cat / total amount of cats
-          ts.freq.words[word][cat] = (rc.words[word][cat] ? rc.words[word][cat]:0) / rc.cats[cat];
-          ts.prob.cats[cat]        = PC(ts.freq.cats[cat],Object.keys(rc.cats).length);
-          ts.prob.words[word][cat] = PWC(ts.freq.words[word][cat]);
-          ts.lg.cats[cat]        = LC(ts.prob.cats[cat]);
-          ts.lg.words[word][cat] = LWC(ts.prob.words[word][cat]);
+          // freq of words per cat  = total amount of words per cat / total amount of cats
+          ts.freq.words[word][cat]  = freqDistro( rc.words[word][cat] / rc.cats[cat]);
+
+          ts.prob.cats[cat]         = PC(  ts.freq.cats[cat], Object.keys(rc.cats).length);
+          ts.prob.words[word][cat]  = PWC( ts.freq.words[word][cat] );
+
+          ts.lg.cats[cat]           = LC( ts.prob.cats[cat] );
+          ts.lg.words[word][cat]    = LWC( ts.prob.words[word][cat] );
         }
       };
       return;
@@ -116,30 +109,49 @@
  
 
   events.on('fileProcessingFinished', function() {
-    var wordsRemoved = [];
-    var trainingSet = bios.slice(0, N)
+
+    function incrementWord(cat, word, counter) {
+      if (typeof counter[word] === 'undefined') {
+        counter[word] = {};
+      }
+      if (typeof counter[word][cat] === 'undefined') {
+        counter[word][cat] = 0;
+      }
+      return ++counter[word][cat];
+    }
+
+
+    /****************BEGIn TRAINING SET************/
+
+    bios.slice(0, N)
       .map(function(el) {
+        
+        // keep track of we've ween
         var wordsSeen = {};
+        
         /* split each record into lines, */
         var temp = el.toLowerCase().split(/\n/);
+        
         /* In each biography, the first line is the name of the person.*/
         var name = temp.shift().trim();
+
         /* The second line is the category (a single word). */
         var cat = temp.shift().trim();
+        
         /* The remaining lines are the biography. */
-        var desc = temp.join(' ')
-          .split(/\s+/) /* we just joined the multiple arrays into one long string, now let's split on spaces */
-          .reduce(function(a, el) {
+        var desc = temp
+          .join(' ')     /* The bio may be fragmnted in different lines. Join them into one string so we cna operate on it a one body */ 
+          .split(/\s+/)  /* we just joined the multiple arrays into one long string, now let's split on spaces */
+          .reduce( function(a, el) {   /* walk over the words in the bio, tabulating and/or omitting them from the */
 
             // This is the pass through the bio of one record
             /* remove small words and junk from the words */
             var cleanword = el.replace(/[^a-z]/g, '');
-            // if the words are longer than 2
-            // AND not in the startwords lookup, 
-            // start counting them
+            
+            // start counting if the words are longer than 2 AND not in the startwords lookup
             if (cleanword.length > 2 && !stopwords[cleanword]) {
               if (!wordsSeen[cleanword]) {
-                tabulateWords(cat, cleanword, ts.rawcount.words);
+                incrementWord(cat, cleanword, ts.rawcount.words);
                 wordsSeen[cleanword] = 1;
               } else {
                 wordsSeen[cleanword]++;
@@ -148,14 +160,13 @@
               a.push(cleanword);
             }
 
-            //console.log(wordsSeen);
             return a;
 
           }, []);
 
         // tabulate the category frequency distribution
         ts.rawcount.cats[cat] = ts.rawcount.cats[cat] ? ts.rawcount.cats[cat] + 1 : 1;
-        ts.freq.cats[cat] = ts.freq.cats[cat] ? ts.freq.cats[cat] + 1 / N : 1 / N;
+        ts.freq.cats[cat]     = ts.freq.cats[cat]     ? ts.freq.cats[cat] + 1 / N : 1 / N;
 
 
         return {
@@ -165,19 +176,26 @@
         };
       })
       
-    computeProbabilities(ts.rawcount);
 
+    // compute the probabilities of the words distributions
+    // note that we have to do this AFTER all the words have been tabulated so there's no risk of calculating partial counts   
+    computeProbabilities( ts.rawcount );
     
-    //console.log(trainingSet)
-    //throw '';
-
-    var testSet = bios.slice(N);
-    //console.log(trainingSet.length);
-    //console.log(testSet);
-    // bios
+    //console.log(ts.rawcount.words);
 
 
-    console.log(ts);
+
+    /****************END TRAINING SET************/
+
+    /****************BEGIN TEST DATA************/
+    bios.slice(N)
+      .map(function(el){
+        // parse the same as above, but do the statistics differently
+        console.log(el)
+      });
+
+
+    //console.log(ts);
     console.log('fileProcessingFinished');
   });
 
@@ -186,9 +204,9 @@
     readFileContents(e, d, readStopWords);
   });
 
-  fs.readFile('bioCorpus.txt', {  encoding: 'utf8'}, function(e, d) {  
+  fs.readFile('tinyCorpus.txt', {  encoding: 'utf8'}, function(e, d) {  
     readFileContents(e, d, readBio);
   });
 
 
-})(1, 9);
+})(1, 5);
