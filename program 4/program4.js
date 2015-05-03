@@ -20,13 +20,33 @@
     },
   };
 
+  var ls = {
+    rawcount: {
+      cats: {},
+      words: {}
+    },
+    freq: {
+      cats: {},
+      words: {}
+    },
+    prob: {
+      cats: {},
+      words: {}
+    },
+    lg: {
+      cats: {},
+      words: {}
+    },
+  };
+
+
   var fs = require('fs');
   var events = new(require('events')).EventEmitter;
   var files = ['stopwords.txt', 'tinyCorpus.txt'];
   var fileCount = 2;
 
 
-  function readBio(data) {
+  function readCorpus(data) {
     // split into records 
     bios = data.toString()
       .trim() /* trim off any whitespace that could potentially become a null record*/
@@ -62,7 +82,7 @@
 
   
 
-  function computeProbabilities(rc){
+  function computeProbabilities(rawCount){
       var epsilon = 0.1;
 
       var PC = function(freq_c, totalCats){
@@ -82,22 +102,26 @@
       }
 
       var freqDistro = function (totalWords, totalCats) {
-        return (totalWords ? totalWords:0) / totalCats;
+        return (totalWords ? totalWords:0) / (totalCats ? totalCats:0);
       }
-
-      //var rc = ts.rawcount;
+      //var rawCount = ts.rawcount;
       // now that we've tabulated all the counts, start workingout all the probabilities
-      for (var word in rc.words){
+      for (var word in rawCount.words){
         
         ts.freq.words[word]={};
         ts.prob.words[word]={};
         ts.lg.words[word]={};
 
-        for(var cat in rc.cats){
-          // freq of words per cat  = total amount of words per cat / total amount of cats
-          ts.freq.words[word][cat]  = freqDistro( rc.words[word][cat] / rc.cats[cat]);
+        for(var cat in rawCount.cats){
+          //console.log(rawCount.cats)
 
-          ts.prob.cats[cat]         = PC(  ts.freq.cats[cat], Object.keys(rc.cats).length);
+          /* For each classification C, define FreqT (C) = OccT (C)/|T|, the fraction of the biographies
+that are of category C.*/
+          ts.freq.cats[cat]         = freqDistro( rawCount.cats[cat] , Object.keys(rawCount.cats).length);
+          // freq of words per cat  = total amount of words per cat / total amount of cats
+          ts.freq.words[word][cat]  = freqDistro( rawCount.words[word][cat] , rawCount.cats[cat]);
+
+          ts.prob.cats[cat]         = PC(  ts.freq.cats[cat], Object.keys(rawCount.cats).length);
           ts.prob.words[word][cat]  = PWC( ts.freq.words[word][cat] );
 
           ts.lg.cats[cat]           = LC( ts.prob.cats[cat] );
@@ -121,10 +145,7 @@
     }
 
 
-    /****************BEGIn TRAINING SET************/
-
-    bios.slice(0, N)
-      .map(function(el) {
+    function parseTestBio( el) {
         
         // keep track of we've ween
         var wordsSeen = {};
@@ -141,32 +162,33 @@
         /* The remaining lines are the biography. */
         var desc = temp
           .join(' ')     /* The bio may be fragmnted in different lines. Join them into one string so we cna operate on it a one body */ 
-          .split(/\s+/)  /* we just joined the multiple arrays into one long string, now let's split on spaces */
-          .reduce( function(a, el) {   /* walk over the words in the bio, tabulating and/or omitting them from the */
-
+          .split(/\s+/)  
+          .reduce( function(a,el){
             // This is the pass through the bio of one record
             /* remove small words and junk from the words */
             var cleanword = el.replace(/[^a-z]/g, '');
             
-            // start counting if the words are longer than 2 AND not in the startwords lookup
-            if (cleanword.length > 2 && !stopwords[cleanword]) {
+            //console.log(a,ls);
+            // start counting if the words are longer than 2 AND not in the startwords lookup AND must be in the training set
+            if (cleanword.length > 2 && !stopwords[cleanword] && ts.rawcount.words[cleanword]) {
               if (!wordsSeen[cleanword]) {
-                incrementWord(cat, cleanword, ts.rawcount.words);
+                incrementWord(cat, cleanword, ls.rawcount.words);
                 wordsSeen[cleanword] = 1;
               } else {
                 wordsSeen[cleanword]++;
               }
               //push this into the set
               a.push(cleanword);
+            }else{
+              console.log('removed word: ',cleanword)
             }
 
             return a;
-
           }, []);
 
         // tabulate the category frequency distribution
-        ts.rawcount.cats[cat] = ts.rawcount.cats[cat] ? ts.rawcount.cats[cat] + 1 : 1;
-        ts.freq.cats[cat]     = ts.freq.cats[cat]     ? ts.freq.cats[cat] + 1 / N : 1 / N;
+        ls.rawcount.cats[cat] = ls.rawcount.cats[cat] ? ls.rawcount.cats[cat] + 1 : 1;
+        ls.freq.cats[cat]     = ls.freq.cats[cat]     ? ls.freq.cats[cat] + 1 / N : 1 / N;
 
 
         return {
@@ -174,14 +196,70 @@
           cat: cat,
           desc: desc
         };
-      })
+      }
+
+    function parseTrainingBio( el) {
+      
+      // keep track of we've ween
+      var wordsSeen = {};
+      
+      /* split each record into lines, */
+      var temp = el.toLowerCase().split(/\n/);
+      
+      /* In each biography, the first line is the name of the person.*/
+      var name = temp.shift().trim();
+
+      /* The second line is the category (a single word). */
+      var cat = temp.shift().trim();
+      
+      /* The remaining lines are the biography. */
+      var desc = temp
+        .join(' ')     /* The bio may be fragmnted in different lines. Join them into one string so we cna operate on it a one body */ 
+        .split(/\s+/)  
+        .reduce( function(a,el){
+          // This is the pass through the bio of one record
+          /* remove small words and junk from the words */
+          var cleanword = el.replace(/[^a-z]/g, '');
+          
+          // start counting if the words are longer than 2 AND not in the startwords lookup
+          if (cleanword.length > 2 && !stopwords[cleanword]) {
+            if (!wordsSeen[cleanword]) {
+              incrementWord(cat, cleanword, ts.rawcount.words);
+              wordsSeen[cleanword] = 1;
+            } else {
+              wordsSeen[cleanword]++;
+            }
+
+
+            //push this into the set
+            a.push(cleanword);
+          }
+
+          return a;
+        }, []);
+
+      // tabulate the category frequency distribution
+      ts.rawcount.cats[cat] = ts.rawcount.cats[cat] ? ts.rawcount.cats[cat] + 1 : 1;
+      ts.freq.cats[cat]     = ts.freq.cats[cat]     ? ts.freq.cats[cat] + 1 / N : 1 / N;
+
+      return {
+        name: name,
+        cat: cat,
+        desc: desc
+      };
+    }
+
+
+    /****************BEGIn TRAINING SET************/
+    bios.slice(0, N)
+      .map( parseTrainingBio )
       
 
-    // compute the probabilities of the words distributions
-    // note that we have to do this AFTER all the words have been tabulated so there's no risk of calculating partial counts   
+   // compute the probabilities of the words distributions
+   // note that we have to do this AFTER all the words have been tabulated so there's no risk of calculating partial counts   
     computeProbabilities( ts.rawcount );
     
-    //console.log(ts.rawcount.words);
+    console.log(ts.freq.words);
 
 
 
@@ -189,11 +267,8 @@
 
     /****************BEGIN TEST DATA************/
     bios.slice(N)
-      .map(function(el){
-        // parse the same as above, but do the statistics differently
-        console.log(el)
-      });
-
+      .map( parseTestBio )
+console.log(ls.freq.words);
 
     //console.log(ts);
     console.log('fileProcessingFinished');
@@ -205,7 +280,7 @@
   });
 
   fs.readFile('tinyCorpus.txt', {  encoding: 'utf8'}, function(e, d) {  
-    readFileContents(e, d, readBio);
+    readFileContents(e, d, readCorpus);
   });
 
 
