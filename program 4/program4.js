@@ -268,9 +268,9 @@ that are of category C.*/
     /****************BEGIN TEST DATA************/
     bios.slice(N)
       .map( parseTestBio )
-console.log(ls.freq.words);
 
-    //console.log(ts);
+
+    console.log(ts);
     console.log('fileProcessingFinished');
   });
 
