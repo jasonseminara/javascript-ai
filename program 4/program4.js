@@ -82,7 +82,8 @@
 
   
 
-  function computeProbabilities(rawCount){
+  function computeProbabilities(data){
+      var rawCount = data.rawcount;
       var epsilon = 0.1;
 
       var PC = function(freq_c, totalCats){
@@ -104,28 +105,27 @@
       var freqDistro = function (totalWords, totalCats) {
         return (totalWords ? totalWords:0) / (totalCats ? totalCats:0);
       }
-      //var rawCount = ts.rawcount;
       // now that we've tabulated all the counts, start workingout all the probabilities
       for (var word in rawCount.words){
         
-        ts.freq.words[word]={};
-        ts.prob.words[word]={};
-        ts.lg.words[word]={};
+        data.freq.words[word]={};
+        data.prob.words[word]={};
+        data.lg.words[word]={};
 
         for(var cat in rawCount.cats){
           //console.log(rawCount.cats)
 
           /* For each classification C, define FreqT (C) = OccT (C)/|T|, the fraction of the biographies
 that are of category C.*/
-          ts.freq.cats[cat]         = freqDistro( rawCount.cats[cat] , Object.keys(rawCount.cats).length);
+          data.freq.cats[cat]         = freqDistro( rawCount.cats[cat] , Object.keys(rawCount.cats).length);
           // freq of words per cat  = total amount of words per cat / total amount of cats
-          ts.freq.words[word][cat]  = freqDistro( rawCount.words[word][cat] , rawCount.cats[cat]);
+          data.freq.words[word][cat]  = freqDistro( rawCount.words[word][cat] , rawCount.cats[cat]);
 
-          ts.prob.cats[cat]         = PC(  ts.freq.cats[cat], Object.keys(rawCount.cats).length);
-          ts.prob.words[word][cat]  = PWC( ts.freq.words[word][cat] );
+          data.prob.cats[cat]         = PC(  data.freq.cats[cat], Object.keys(rawCount.cats).length);
+          data.prob.words[word][cat]  = PWC( data.freq.words[word][cat] );
 
-          ts.lg.cats[cat]           = LC( ts.prob.cats[cat] );
-          ts.lg.words[word][cat]    = LWC( ts.prob.words[word][cat] );
+          data.lg.cats[cat]           = LC( data.prob.cats[cat] );
+          data.lg.words[word][cat]    = LWC( data.prob.words[word][cat] );
         }
       };
       return;
@@ -186,11 +186,12 @@ that are of category C.*/
             return a;
           }, []);
 
-        // tabulate the category frequency distribution
+
+        /*// tabulate the category frequency distribution
         ls.rawcount.cats[cat] = ls.rawcount.cats[cat] ? ls.rawcount.cats[cat] + 1 : 1;
         ls.freq.cats[cat]     = ls.freq.cats[cat]     ? ls.freq.cats[cat] + 1 / N : 1 / N;
 
-
+*/
         return {
           name: name,
           cat: cat,
@@ -253,24 +254,76 @@ that are of category C.*/
     /****************BEGIn TRAINING SET************/
     bios.slice(0, N)
       .map( parseTrainingBio )
+      /*.forEach(function(el){
+        console.log(el)
+        throw '';
+      })*/
       
 
    // compute the probabilities of the words distributions
    // note that we have to do this AFTER all the words have been tabulated so there's no risk of calculating partial counts   
-    computeProbabilities( ts.rawcount );
+    computeProbabilities( ts );
     
-    console.log(ts.freq.words);
+    console.log(bios);
 
 
 
     /****************END TRAINING SET************/
 
     /****************BEGIN TEST DATA************/
-    bios.slice(N)
+    normalizedTest = bios.slice(N)
       .map( parseTestBio )
+      /* for each bio */
+      .map( function(el){ 
+        var localMin = {key:'' , val:Math.Infinity};
+        var x = {};
+        /* caculate the prediction for each category */
+        var cats = Object.keys(ts.rawcount.cats);
+
+        /* walk over the known categories */
+        var localScores =  el['stats'] = cats
+          .reduce( function(LCB,cat){
+
+            //For each category C, compute L(C|B) = L(C) + 􏰀W ∈B L(W |C).
+            LCB[cat]= ts.lg.cats[cat] +            /* L(C|B) */
+              el.desc.reduce( function(b,word){    /* W ∈B */
+                return b + ts.lg.words[word][cat]; /* SUM(L(W|C)) */
+              },0);
+            
+            /* Calculate the local Min; record its key and val */
+            localMin = (localMin.val <= LCB[cat]) ? localMin :{key:cat,val:LCB[cat]};
+            
+            return LCB;
+          },{})
+
+        console.log(localMin);
+
+        /* record the prediction */
+        el['prediction'] = localMin.key;
+
+        var x = cats
+          .reduce(function(X, cat){ 
+            X[cat] = ((localScores[cat]-localMin.val)<7) ? Math.pow(2,localMin.val-localScores[cat]) : 0;
+            return X;
+          },{});
+
+          
+        //var m = el['stats'][el['prediction']];
+        var s = Object.keys(x)
+          .reduce(function(S,cat){ 
+            return S + x[cat] ;
+          },0);
+        console.log('s',x,s)
+        return el;
+      })
 
 
-    console.log(ts);
+    //computeProbabilities( ls );
+    //ts.rawcount.cats.forEach(function(el))
+    //recoverProbabilities = function()
+
+     
+    console.log(normalizedTest);
     console.log('fileProcessingFinished');
   });
 
