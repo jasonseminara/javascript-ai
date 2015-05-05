@@ -1,4 +1,7 @@
 (function learn(bios, N, stopwords) {
+  var fs = require('fs');
+  var events = new(require('events')).EventEmitter;
+  var fileCount = 2;
   var bios = [];
   var stopwords = {};
   var ts = {
@@ -20,30 +23,6 @@
     },
   };
 
-  var ls = {
-    rawcount: {
-      cats: {},
-      words: {}
-    },
-    freq: {
-      cats: {},
-      words: {}
-    },
-    prob: {
-      cats: {},
-      words: {}
-    },
-    lg: {
-      cats: {},
-      words: {}
-    },
-  };
-
-
-  var fs = require('fs');
-  var events = new(require('events')).EventEmitter;
-  var files = ['stopwords.txt', 'tinyCorpus.txt'];
-  var fileCount = 2;
 
 
   function readCorpus(data) {
@@ -70,6 +49,10 @@
     return;
   }
 
+
+  /**
+  * When the last one is read, emit a custom event
+  */
   function readFileContents(err, data, callback) {
     if (err) throw err;
     callback(data);
@@ -81,7 +64,9 @@
 
 
   
-
+  /**
+  * Encapsulate all the probability/frequency distro fns
+  */
   function computeProbabilities(data){
       var rawCount = data.rawcount;
       var epsilon = 0.1;
@@ -132,7 +117,7 @@
     }
  
 
-  events.on('fileProcessingFinished', function() {
+
 
     function incrementWord(cat, word, counter) {
       if (typeof counter[word] === 'undefined') {
@@ -144,60 +129,6 @@
       return ++counter[word][cat];
     }
 
-
-    function parseTestBio( el) {
-        
-        // keep track of we've ween
-        var wordsSeen = {};
-        
-        /* split each record into lines, */
-        var temp = el.toLowerCase().split(/\n/);
-        
-        /* In each biography, the first line is the name of the person.*/
-        var name = temp.shift().trim();
-
-        /* The second line is the category (a single word). */
-        var cat = temp.shift().trim();
-        
-        /* The remaining lines are the biography. */
-        var desc = temp
-          .join(' ')     /* The bio may be fragmnted in different lines. Join them into one string so we cna operate on it a one body */ 
-          .split(/\s+/)  
-          .reduce( function(a,el){
-            // This is the pass through the bio of one record
-            /* remove small words and junk from the words */
-            var cleanword = el.replace(/[^a-z]/g, '');
-            
-            //console.log(a,ls);
-            // start counting if the words are longer than 2 AND not in the startwords lookup AND must be in the training set
-            if (cleanword.length > 2 && !stopwords[cleanword] && ts.rawcount.words[cleanword]) {
-              if (!wordsSeen[cleanword]) {
-                incrementWord(cat, cleanword, ls.rawcount.words);
-                wordsSeen[cleanword] = 1;
-              } else {
-                wordsSeen[cleanword]++;
-              }
-              //push this into the set
-              a.push(cleanword);
-            }else{
-              console.log('removed word: ',cleanword)
-            }
-
-            return a;
-          }, []);
-
-
-        /*// tabulate the category frequency distribution
-        ls.rawcount.cats[cat] = ls.rawcount.cats[cat] ? ls.rawcount.cats[cat] + 1 : 1;
-        ls.freq.cats[cat]     = ls.freq.cats[cat]     ? ls.freq.cats[cat] + 1 / N : 1 / N;
-
-*/
-        return {
-          name: name,
-          cat: cat,
-          desc: desc
-        };
-      }
 
     function parseTrainingBio( el) {
       
@@ -251,6 +182,58 @@
     }
 
 
+    function parseTestBio( el) {
+      // keep track of we've ween
+      var wordsSeen = {};
+      
+      /* split each record into lines, */
+      var temp = el.toLowerCase().split(/\n/);
+      
+      /* In each biography, the first line is the name of the person.*/
+      var name = temp.shift().trim();
+
+      /* The second line is the category (a single word). */
+      var cat = temp.shift().trim();
+      
+      /* The remaining lines are the biography. */
+      var desc = temp
+        .join(' ')     /* The bio may be fragmnted in different lines. Join them into one string so we cna operate on it a one body */ 
+        .split(/\s+/) 
+        /* we'll use reduce here because the returned set may be smaller that set we're iterating */ 
+        .reduce( function(a,el){
+          // This is the pass through the bio of one record
+          /* remove small words and junk from the words */
+          var cleanword = el.replace(/[^a-z]/g, '');
+          
+          //console.log(a,ls);
+          // start counting if the words are longer than 2 AND not in the startwords lookup 
+          // AND must be in the training set
+          if (cleanword.length > 2 && !stopwords[cleanword] && ts.rawcount.words[cleanword] && !wordsSeen[cleanword]) {
+            wordsSeen[cleanword] = 1;
+            //push this into the set
+            a.push(cleanword);
+          }else{
+            //console.log('removed word: ',cleanword)
+          }
+
+          return a;
+        }, []);
+
+      return {
+        name: name,
+        cat: cat,
+        desc: desc
+      };
+    }
+
+
+
+  /**
+  * EVENT HANDLER:
+  * When the last file finishes processing
+  */
+
+  events.on('fileProcessingFinished', function() {
     /****************BEGIn TRAINING SET************/
     bios.slice(0, N).map( parseTrainingBio )
 
@@ -260,70 +243,71 @@
    // note that we have to do this AFTER all the words have been tabulated so there's no risk of calculating partial counts   
     computeProbabilities( ts );
     
-    
-
-
-
     /****************END TRAINING SET************/
 
     /****************BEGIN TEST DATA************/
-    normalizedTest = bios.slice(N)
+    
+    var normalizedTest = bios.slice(N)
+      /*  */
       .map( parseTestBio )
       /* for each bio */
       .map( function(el){ 
-        var localMin = {key:'' , val:Math.Infinity};
-        var x = [];
-        var s = 0;
-        /* caculate the prediction for each category */
-        var cats = Object.keys(ts.rawcount.cats);
 
-        /* walk over the known categories */
-        var localScores =  el['stats'] = cats
-          
+        // we'll need the localMin for later when we recover the probs of this record 
+        var localMin = {val:Math.Infinity};
+
+        // the sum of the recovered probs
+        var s = 0;
+
+        /* Calculate the prediction for each category */
+        /* Grab the keys as an array, so we can use all the Array chaining magic */
+        /* Also, we'll use this array later to reconstitute/classify  the probs */
+        var cats = Object.keys(ts.rawcount.cats)
+        
+        el['stats'] = cats
+
+          /* walk over the known categories */
           .map( function(cat){
 
-            //For each category C, compute L(C|B) = L(C) + 􏰀W ∈B L(W |C).
+            // For each category C, compute L(C|B) = L(C) + 􏰀W ∈B L(W |C).
             var LCB = ts.lg.cats[cat] +            /* L(C|B) */
               el.desc.reduce( function(b,word){    /* W ∈B */
                 return b + ts.lg.words[word][cat]; /* SUM(L(W|C)) */
-              },0);
+              }, 0);
             
             /* Calculate the local Min; record its key and val */
-            localMin = (localMin.val <= LCB) ? localMin :{key:cat,val:LCB};
+            localMin = (localMin.val <= LCB) ? localMin : {key:cat,val:LCB};
 
             /* record the prediction */
             el['prediction'] = localMin.key;
             
             return LCB;
           })
-          /* Recover the probabilities */
+
+          /* Recover the probabilities; return them positionally; we'll recover the positions next  */
           .map( function( cat ){ 
+            // this is the formula for the recovery
             // if (ci−m<7)  xi=2^m−ci else xi=0
             var xi = ((cat-localMin.val)<7) ? Math.pow(2,localMin.val-cat) : 0;
-            s+=xi;
-            //x.push(xi);
+    
+            // While we're here, we can accumulate the sum in s
+            // It's local to this bio/record and will reset on each record
+            s += xi;
             return xi;
           })
+
+          /* Recover the computations xi as a fraction of s  */ 
           .reduce( function(a, xi,i){
             a[cats[i]] = xi/s;
             return a;
           },{});
-
-
-          debugger;
-
+ 
         return el;
       })
-
-
-    //computeProbabilities( ls );
-    //ts.rawcount.cats.forEach(function(el))
-    //recoverProbabilities = function()
-    console.log(bios);
-     
-    console.log(normalizedTest);
+console.log(normalizedTest)
     console.log('fileProcessingFinished');
   });
+  /****************END TEST DATA************/
 
 
   fs.readFile('stopwords.txt', {  encoding: 'utf8'}, function(e, d) {  
