@@ -1,10 +1,11 @@
-(function learn(N) {
-  var fs = require('fs');
-  var events = new(require('events')).EventEmitter;
-  var fileCount = 2;
-  var bios = [];
-  var stopwords = {};
-  var ts = {
+function NaiveBayes(N, stopwordsFileName) {
+  var fs = require('fs'),
+    results = [],
+    events = new(require('events')).EventEmitter,
+    fileCount = 2,
+    bios = [],
+    stopwords = {},
+    ts = {
     rawcount: {
       cats: {},
       words: {}
@@ -20,7 +21,7 @@
     lg: {
       cats: {},
       words: {}
-    },
+    }
   };
 
 
@@ -93,9 +94,11 @@
 
       // now that we've tabulated all the counts, start workingout all the probabilities
       Object.keys(rawCount.words).forEach(function(word){
+       
         data.freq.words[word] = {};
         data.prob.words[word] = {};
         data.lg.words[word]   = {};
+       
         Object.keys(rawCount.cats).forEach(function(cat){
           //console.log(rawCount.cats)
 
@@ -136,17 +139,18 @@
       var wordsSeen = {};
       
       /* split each record into lines, */
-      var temp = el.toLowerCase().split(/\n/);
+      var temp = el.split(/\n/);
       
       /* In each biography, the first line is the name of the person.*/
       var name = temp.shift().trim();
 
       /* The second line is the category (a single word). */
-      var cat = temp.shift().trim();
+      var cat = temp.shift().toLowerCase().trim();
       
       /* The remaining lines are the biography. */
       var desc = temp
         .join(' ')     /* The bio may be fragmnted in different lines. Join them into one string so we cna operate on it a one body */ 
+        .toLowerCase()
         .split(/\s+/)  
         .reduce( function(a,el){
           // This is the pass through the bio of one record
@@ -187,7 +191,7 @@
       var wordsSeen = {};
       
       /* split each record into lines, */
-      var temp = el.toLowerCase().split(/\n/);
+      var temp = el.split(/\n/);
       
       /* In each biography, the first line is the name of the person.*/
       var name = temp.shift().trim();
@@ -198,6 +202,7 @@
       /* The remaining lines are the biography. */
       var desc = temp
         .join(' ')     /* The bio may be fragmnted in different lines. Join them into one string so we cna operate on it a one body */ 
+        .toLowerCase()
         .split(/\s+/) 
         /* we'll use reduce here because the returned set may be smaller that set we're iterating */ 
         .reduce( function(a,el){
@@ -226,28 +231,35 @@
       };
     }
 
+    function outputResults () {
+      console.log(results)
+    }
+
+
+  /**
+  * EVENT HANDLER:
+  * When the probabilities are finished processing
+  */
+  events.on('computeProbabilitiesFinished' , outputResults);
+
 
 
   /**
   * EVENT HANDLER:
   * When the last file finishes processing
   */
-
   events.on('fileProcessingFinished', function() {
+
     /****************BEGIn TRAINING SET************/
     bios.slice(0, N).map( parseTrainingBio )
-
-      
-
-   // compute the probabilities of the words distributions
-   // note that we have to do this AFTER all the words have been tabulated so there's no risk of calculating partial counts   
+    // compute the probabilities of the words distributions
+    // note that we have to do this AFTER all the words have been tabulated so there's no risk of calculating partial counts   
     computeProbabilities( ts );
-    
     /****************END TRAINING SET************/
 
-    /****************BEGIN TEST DATA************/
-    
-    var normalizedTest = bios.slice(N)
+
+    /****************BEGIN TEST DATA************/    
+    results = bios.slice(N)
       /*  */
       .map( parseTestBio )
       /* for each bio */
@@ -304,19 +316,24 @@
  
         return el;
       })
-console.log(normalizedTest)
-    console.log('fileProcessingFinished');
+    events.emit('computeProbabilitiesFinished');
+    //console.log(results)
+    //console.log('fileProcessingFinished');
   });
   /****************END TEST DATA************/
 
 
-  fs.readFile('stopwords.txt', {  encoding: 'utf8'}, function(e, d) {  
+
+  /***************READ FILES *******************/
+  fs.readFile(stopwordsFileName, {  encoding: 'utf8'}, function(e, d) {  
     readFileContents(e, d, readStopWords);
   });
 
-  fs.readFile('tinyCorpus.txt', {  encoding: 'utf8'}, function(e, d) {  
+  fs.readFile('corpus.txt', {  encoding: 'utf8'}, function(e, d) {  
     readFileContents(e, d, readCorpus);
   });
 
+}
 
-})(5);
+//console.log(process.argv.slice(2));
+NaiveBayes.apply(this,process.argv.slice(2));
