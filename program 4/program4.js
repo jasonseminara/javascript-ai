@@ -1,4 +1,4 @@
-(function learn(bios, N, stopwords) {
+(function learn(N) {
   var fs = require('fs');
   var events = new(require('events')).EventEmitter;
   var fileCount = 2;
@@ -319,4 +319,4 @@ console.log(normalizedTest)
   });
 
 
-})(1, 5);
+})(5);
