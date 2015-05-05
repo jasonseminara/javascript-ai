@@ -1,4 +1,41 @@
+/**
+  * Performs a Naive Bayes Text Classification on a body of text; 
+  * Tries to guess the category of a given text
+  * @author Jason Seminara, N12517906
+  * @since 2015-05-05
+  * @see http://cs.nyu.edu/courses/spring15/CSCI-GA.2560-001/prog4.pdf
+  * @for New York University : CSCI-GA.2560-001 : Artificial Intelligence : Ernest Davis
+  * 
+
+  *
+  * @INSTRUCTIONS
+  * This is a node.js executable. 
+  * Execute by passing the two required args in the command line:
+  * 1. N (the count of records to use as the training set)
+  * 2. stopwordsFileName (the filename of the text file that defines the words to skip during the learning phase)
+  * e.g.
+  * node naiveBayes.js 5 stopwords.txt
+  *
+  
+  *
+  * @returns tabular output of the category prediction of the given set of biographies, including the overall accuracy of the predictions:
+  * (eg) 
+  * Benjamin Disraeli.  Prediction: Writer.  Wrong.
+  * Government: 0.44     Music: 0.07     Writer: 0.48
+  * George Eliot.  Prediction: Writer.  Right.
+  * Government: 0.01     Music: 0.07     Writer: 0.91
+  * Barbara Jordan.  Prediction: Government.  Right.
+  * Government: 0.97.    Music: 0.03.    Writer: 0.00
+  * Clara Schumann.  Prediction: Music.  Right
+  * Government: 0.01.    Music: 0.98.    Writer: 0.01
+  * Overall accuracy: 3 out of 4 = 0.75.
+  *
+
+*/
+
+
 function NaiveBayes(N, stopwordsFileName) {
+
   var fs = require('fs'),
     results = [],
     events = new(require('events')).EventEmitter,
@@ -337,7 +374,7 @@ function NaiveBayes(N, stopwordsFileName) {
 
 
   /***************READ FILES *******************/
-  fs.readFile(stopwordsFileName, {  encoding: 'utf8'}, function(e, d) {  
+  fs.readFile((stopwordsFileName?stopwordsFileName:'stopwords.txt'), {  encoding: 'utf8'}, function(e, d) {  
     readFileContents(e, d, readStopWords);
   });
 
