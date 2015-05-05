@@ -12,9 +12,12 @@ Tries to guess the category of a given text
 ##Instructions
 This is a node.js executable. (Tested on v0.12.2)
 
-Execute by passing the two required args in the command line (It will always read from a corpus named 'corpus.txt':
+Execute by passing the two required args in the command line :
 1. N (the count of records to use as the training set)
 2. stopwordsFileName (the filename of the text file that defines the words to skip during the learning phase)
+
+*Note: It will always read from a corpus named 'corpus.txt'; other corpora are stored in other_corpora. To try any of these alternative corpora, move any one of them into the current working directory and rename to corpus.txt. I would have made it a 4th param, but the assignment explicitly requires the program to read from corpus.txt * 
+
 
 For example:
 
