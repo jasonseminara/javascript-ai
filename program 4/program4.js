@@ -232,7 +232,21 @@ function NaiveBayes(N, stopwordsFileName) {
     }
 
     function outputResults () {
-      console.log(results)
+      var correctResults = 0;
+      var output = results.reduce( function(a, r){
+        var result = r.cat.toLowerCase() === r.prediction.toLowerCase() ? (correctResults++,'Right.') : 'Wrong.';
+        a += r.name 
+          + '.\tPrediction: ' + r.prediction + '.\t'+ result + '\n'
+          + Object.keys(r.stats).reduce(function(a,stat){
+            return a + stat + ': ' + r.stats[stat].toFixed(2)+ ' \t';
+          },'') 
+          + '\n\n';
+        return a;
+      },'')
+      + 'Overall accuracy: '+correctResults+ ' out of '+ results.length + ' = ' + (correctResults/results.length).toFixed(2)
+      + '\n';
+      console.log(output);
+      return;
     }
 
 
@@ -317,8 +331,6 @@ function NaiveBayes(N, stopwordsFileName) {
         return el;
       })
     events.emit('computeProbabilitiesFinished');
-    //console.log(results)
-    //console.log('fileProcessingFinished');
   });
   /****************END TEST DATA************/
 
